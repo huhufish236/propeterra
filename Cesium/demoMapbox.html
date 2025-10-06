@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>demoMapbox</title>
+    <!-- Import Mapbox GL JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style type="text/css">
+      html,
+      body,
+      #mapContainer {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      @import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500&display=swap");
+
+      /* Switch Button Styles */
+      #switchButtonContainer {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 1000;
+        display: flex;
+        gap: 10px;
+      }
+
+      .switch-button {
+        padding: 10px 15px;
+        font-size: 14px;
+        font-family: 'Orbitron', sans-serif;
+        background: linear-gradient(135deg, rgba(32, 36, 60, 0.95) 0%, rgba(16, 20, 40, 0.95) 100%);
+        color: #51a2ff;
+        border: 1px solid rgba(81, 162, 255, 0.3);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .switch-button::before {
+        content: "";
+        position: absolute;
+        top: -1px;
+        left: -1px;
+        right: -1px;
+        bottom: -1px;
+        border-radius: 8px;
+        padding: 1px;
+        background: linear-gradient(135deg, #51a2ff, #2c76dc, #0f4c9c);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      .switch-button:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), 0 0 15px rgba(81, 162, 255, 0.3);
+        color: #ffffff;
+      }
+
+      .switch-button:active {
+        transform: translateY(1px);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+      }
+
+      .switch-button.active {
+        color: #ffffff;
+        background: linear-gradient(135deg, rgba(32, 36, 60, 0.8) 0%, rgba(16, 20, 40, 0.8) 100%);
+        box-shadow: 0 0 15px rgba(81, 162, 255, 0.5);
+      }
+
+      /* Info panel */
+      #infoPanel {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 320px;
+        background: linear-gradient(
+          135deg,
+          rgba(16, 20, 40, 0.95) 0%,
+          rgba(32, 36, 60, 0.95) 100%
+        );
+        color: #e0e7ff;
+        border-radius: 8px;
+        padding: 0;
+        font-family: "Roboto", Arial, sans-serif;
+        font-size: 14px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(81, 162, 255, 0.2);
+        display: none;
+        max-height: 80%;
+        overflow-y: auto;
+        z-index: 999;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(81, 162, 255, 0.3);
+        transform: translateY(-10px);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      #infoPanel.visible {
+        transform: translateY(0);
+        opacity: 1;
+        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6),
+          0 0 0 1px rgba(81, 162, 255, 0.4), 0 0 15px rgba(81, 162, 255, 0.3);
+      }
+
+      #infoPanel .header {
+        background: linear-gradient(
+          90deg,
+          rgba(16, 20, 40, 0.8) 0%,
+          rgba(32, 36, 60, 0.8) 100%
+        );
+        border-bottom: 1px solid rgba(81, 162, 255, 0.3);
+        padding: 12px 15px;
+        font-size: 16px;
+        font-weight: 500;
+        text-align: center;
+        font-family: "Orbitron", sans-serif;
+        letter-spacing: 1px;
+        color: #51a2ff;
+        border-radius: 8px 8px 0 0;
+        position: relative;
+      }
+
+      #infoPanel .close-btn {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        color: #51a2ff;
+        font-size: 16px;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: all 0.2s ease;
+        z-index: 2;
+      }
+
+      #infoPanel .close-btn:hover {
+        color: #fff;
+        background: rgba(81, 162, 255, 0.2);
+        box-shadow: 0 0 10px rgba(81, 162, 255, 0.5);
+      }
+
+      #propertyContent {
+        padding: 10px 15px;
+        position: relative;
+      }
+
+      #infoPanel .property-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(81, 162, 255, 0.15);
+      }
+
+      #infoPanel .property-name {
+        font-weight: 500;
+        color: #51a2ff;
+        font-family: "Orbitron", sans-serif;
+        font-size: 13px;
+      }
+
+      #infoPanel .property-value {
+        text-align: left;
+        color: #e0e7ff;
+        font-family: "Roboto", sans-serif;
+        background: rgba(81, 162, 255, 0.05);
+        padding: 2px 8px;
+        border-radius: 4px;
+        border-left: 2px solid rgba(81, 162, 255, 0.3);
+        min-width: 60px;
+        text-align: center;
+      }
+
+      #infoPanel .property-value.numeric {
+        font-family: "Orbitron", sans-serif;
+        letter-spacing: 1px;
+      }
+
+      /* Scrollbar */
+      #infoPanel::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      #infoPanel::-webkit-scrollbar-track {
+        background: rgba(16, 20, 40, 0.5);
+      }
+
+      #infoPanel::-webkit-scrollbar-thumb {
+        background: rgba(81, 162, 255, 0.5);
+        border-radius: 3px;
+      }
+
+      #loadingIndicator {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(16, 20, 40, 0.8);
+        color: #51a2ff;
+        padding: 15px 25px;
+        border-radius: 8px;
+        font-family: "Orbitron", sans-serif;
+        box-shadow: 0 0 20px rgba(81, 162, 255, 0.5);
+        z-index: 1000;
+        display: none;
+      }
+
+      /* Legend */
+      #legend {
+        position: absolute;
+        bottom: 20px;
+        right: 10px;
+        background: linear-gradient(
+          135deg,
+          rgba(16, 20, 40, 0.95) 0%,
+          rgba(32, 36, 60, 0.95) 100%
+        );
+        padding: 10px;
+        border-radius: 8px;
+        font-family: "Roboto", Arial, sans-serif;
+        color: #e0e7ff;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5),
+          0 0 0 1px rgba(81, 162, 255, 0.2);
+        z-index: 10;
+        border: 1px solid rgba(81, 162, 255, 0.3);
+      }
+
+      #legend h3 {
+        margin: 0 0 10px 0;
+        font-family: "Orbitron", sans-serif;
+        font-size: 14px;
+        color: #51a2ff;
+        text-align: center;
+      }
+
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 5px;
+      }
+
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        border-radius: 3px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+      }
+
+      .legend-label {
+        font-size: 12px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="mapContainer"></div>
+
+    <!-- Switch Buttons -->
+    <div id="switchButtonContainer">
+      <button class="switch-button" id="cesiumButton" onclick="window.location.href='demoCesium.html'">Cesium Map</button>
+      <button class="switch-button active" id="mapboxButton" onclick="window.location.href='demoMapbox.html'">Mapbox Map</button>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div id="loadingIndicator">Loading...</div>
+
+    <!-- Info Panel -->
+    <div id="infoPanel">
+      <button class="close-btn">×</button>
+      <div class="header">Attribute Information</div>
+      <div id="propertyContent"></div>
+    </div>
+
+    <!-- Legend -->
+    <div id="legend">
+      <h3>Type Legend</h3>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #4287f5"></div>
+        <div class="legend-label">Commercial Office</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #f542a7"></div>
+        <div class="legend-label">Commercial Retail</div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color" style="background-color: #42f5b3"></div>
+        <div class="legend-label">Other Businesses</div>
+      </div>
+    </div>
+
+    <script>
+      mapboxgl.accessToken =
+        "pk.eyJ1Ijoid2VpeWFuc2hlbmciLCJhIjoiY2xwbTFjNnlrMDVndzJpbWZtZjRvY3JqZyJ9.3iKZK8y9yVHMnaqonFHE_g";
+
+      const loadingIndicator = document.getElementById("loadingIndicator");
+      loadingIndicator.style.display = "block";
+
+      const map = new mapboxgl.Map({
+        container: "mapContainer",
+        style: "mapbox://styles/mapbox/dark-v11",
+        center: [55.2708, 25.2048],
+        zoom: 12,
+        pitch: 45,
+        bearing: 0,
+        antialias: true,
+      });
+
+      const infoPanel = document.getElementById("infoPanel");
+      const propertyContent = document.getElementById("propertyContent");
+      const closeBtn = document.querySelector("#infoPanel .close-btn");
+
+      closeBtn.addEventListener("click", () => {
+        infoPanel.classList.remove("visible");
+        setTimeout(() => {
+          infoPanel.style.display = "none";
+        }, 300);
+        if (map.getLayer("selected-feature")) {
+          map.removeLayer("selected-feature");
+          map.removeSource("selected-feature");
+        }
+      });
+
+      function showPropertyInfo(properties) {
+        propertyContent.innerHTML = "";
+        if (!properties || Object.keys(properties).length === 0) {
+          propertyContent.innerHTML = '<div class="property-row">No available attributes</div>';
+          return;
+        }
+        for (const key in properties) {
+          if (properties.hasOwnProperty(key) && key !== "id") {
+            const value = properties[key];
+            if (value !== undefined && value !== null) {
+              const row = document.createElement("div");
+              row.className = "property-row";
+
+              const nameSpan = document.createElement("span");
+              nameSpan.className = "property-name";
+              nameSpan.textContent = key;
+
+              const valueSpan = document.createElement("span");
+              valueSpan.className = "property-value";
+
+              if (!isNaN(parseFloat(value)) && isFinite(value)) {
+                valueSpan.classList.add("numeric");
+              }
+
+              valueSpan.textContent = value;
+              row.appendChild(nameSpan);
+              row.appendChild(valueSpan);
+              propertyContent.appendChild(row);
+            }
+          }
+        }
+        infoPanel.style.display = "block";
+        setTimeout(() => {
+          infoPanel.classList.add("visible");
+        }, 10);
+      }
+
+      map.on("load", () => {
+        loadingIndicator.style.display = "none";
+
+        map.addSource("dubai-data", {
+          type: "geojson",
+          data: "/dibai.geojson",
+        });
+
+        map.addLayer({
+          id: "dubai-commerce-office",
+          type: "fill-extrusion",
+          source: "dubai-data",
+          filter: ["==", ["get", "type"], "commerce:office"],
+          paint: {
+            "fill-extrusion-color": "#4287f5",
+            "fill-extrusion-base": ["get", "minHeight"],
+            "fill-extrusion-opacity": 0.8,
+          },
+        });
+
+        map.addLayer({
+          id: "dubai-commerce-retail",
+          type: "fill-extrusion",
+          source: "dubai-data",
+          filter: ["==", ["get", "type"], "commerce:retail"],
+          paint: {
+            "fill-extrusion-color": "#f542a7",
+            "fill-extrusion-base": ["get", "minHeight"],
+            "fill-extrusion-opacity": 0.8,
+          },
+        });
+
+        map.addLayer({
+          id: "dubai-commerce",
+          type: "fill-extrusion",
+          source: "dubai-data",
+          filter: ["==", ["get", "type"], "commerce"],
+          paint: {
+            "fill-extrusion-color": "#42f5b3",
+            "fill-extrusion-base": ["get", "minHeight"],
+            "fill-extrusion-opacity": 0.8,
+          },
+        });
+
+        console.log("Map and data loaded");
+      });
+
+      const commerceLayers = [
+        "dubai-commerce-office",
+        "dubai-commerce-retail",
+        "dubai-commerce",
+      ];
+
+      commerceLayers.forEach((layerId) => {
+        map.on("click", layerId, (e) => {
+          const features = map.queryRenderedFeatures(e.point, {
+            layers: [layerId],
+          });
+
+          if (features.length > 0) {
+            const feature = features[0];
+
+            if (map.getLayer("selected-feature")) {
+              map.removeLayer("selected-feature");
+              map.removeSource("selected-feature");
+            }
+
+            map.addSource("selected-feature", {
+              type: "geojson",
+              data: feature.toJSON(),
+            });
+
+            map.addLayer({
+              id: "selected-feature",
+              type: "fill-extrusion",
+              source: "selected-feature",
+              paint: {
+                "fill-extrusion-color": "#ffcc00",
+                "fill-extrusion-height": ["get", "height"],
+                "fill-extrusion-base": ["get", "minHeight"],
+                "fill-extrusion-opacity": 0.9,
+              },
+            });
+
+            showPropertyInfo(feature.properties);
+          }
+        });
+
+        map.on("mouseenter", layerId, () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+
+        map.on("mouseleave", layerId, () => {
+          map.getCanvas().style.cursor = "";
+        });
+      });
+
+      map.on("click", (e) => {
+        const features = map.queryRenderedFeatures(e.point, {
+          layers: commerceLayers,
+        });
+        if (features.length === 0) {
+          infoPanel.classList.remove("visible");
+          setTimeout(() => {
+            infoPanel.style.display = "none";
+          }, 300);
+
+          if (map.getLayer("selected-feature")) {
+            map.removeLayer("selected-feature");
+            map.removeSource("selected-feature");
+          }
+        }
+      });
+    </script>
+  </body>
+</html>

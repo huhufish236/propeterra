@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>demoCesium - OSM + Purple Sidebar</title>
+  <script src="https://cesium.com/downloads/cesiumjs/releases/1.106/Build/Cesium/Cesium.js"></script>
+  <link href="https://cesium.com/downloads/cesiumjs/releases/1.106/Build/Cesium/Widgets/widgets.css" rel="stylesheet" />
+  <style>
+    html, body, #cesiumContainer {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    #sidebar {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 300px;
+      height: 100%;
+      background: #2e003e;
+      color: #f0e6ff;
+      padding: 20px;
+      box-shadow: -2px 0 10px rgba(0,0,0,0.4);
+      z-index: 10;
+      overflow-y: auto;
+    }
+    #sidebar h2 {
+      margin-top: 0;
+      color: #d29eff;
+    }
+    #propertyContent .property-row {
+      margin-bottom: 10px;
+    }
+    .switch-controls {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 20;
+    }
+    .switch-controls button {
+      background-color: #6200ea;
+      color: white;
+      border: none;
+      padding: 10px;
+      margin-right: 5px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .switch-controls button:hover {
+      background-color: #3700b3;
+    }
+    #legendPanel {
+      position: absolute;
+      bottom: 20px;
+      right: 320px;
+      background: #3e0058;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.5);
+      font-size: 13px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .legend-color {
+      width: 16px;
+      height: 16px;
+      margin-right: 8px;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div id="cesiumContainer"></div>
+
+  <div id="sidebar">
+    <h2>Building Info</h2>
+    <div id="propertyContent">Click on buildings to see information</div>
+  </div>
+
+  <div class="switch-controls">
+    <button onclick="window.location.href='demoMapbox.html'">2D View</button>
+    <button onclick="viewer.scene.morphTo3D(1.0)">3D View</button>
+  </div>
+
+  <div id="legendPanel">
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #4287f5;"></div>
+      <div>Commercial office</div>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #f542a7;"></div>
+      <div>Commercial retail</div>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background-color: #42f5b3;"></div>
+      <div>Other businesses</div>
+    </div>
+  </div>
+
+  <script>
+    const viewer = new Cesium.Viewer('cesiumContainer', {
+      baseLayerPicker: false,
+      timeline: false,
+      animation: false,
+      geocoder: false,
+      sceneModePicker: false,
+      homeButton: false,
+      navigationHelpButton: false,
+      infoBox: false,
+      selectionIndicator: false,
+      imageryProvider: new Cesium.OpenStreetMapImageryProvider({url : 'https://a.tile.openstreetmap.org/'})
+    });
+
+    viewer.cesiumWidget.creditContainer.style.display = "none";
+
+    Cesium.Cesium3DTileset.fromUrl("./dubai3Dtiles/tileset.json").then(tileset => {
+      viewer.scene.primitives.add(tileset);
+      viewer.zoomTo(tileset);
+
+      const handler = new Cesium.ScreenSpaceEventHandler(viewer.scene.canvas);
+      handler.setInputAction(function(click) {
+        const pickedFeature = viewer.scene.pick(click.position);
+        if (!Cesium.defined(pickedFeature)) return;
+
+        const props = pickedFeature.getPropertyIds().map(id => {
+          return `<div class='property-row'><strong>${id}</strong>: ${pickedFeature.getProperty(id)}</div>`;
+        }).join('');
+        document.getElementById("propertyContent").innerHTML = props || "No properties available";
+      }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+    });
+  </script>
+</body>
+</html>
